@@ -159,6 +159,19 @@ public class Bpmn2Preferences implements IResourceChangeListener, IPropertyChang
 
 	public final static String PREF_TEXT_LIMIT = "text.limit"; //$NON-NLS-1$
 	public final static String PREF_TEXT_LIMIT_LABEL = Messages.Bpmn2Preferences_Text_Limit;
+	// EcoreFS begin: project-scoped IPFS preference keys used by the BPMN2 UI actions
+	public final static String PREF_IPFS_API_URL = "ipfs.api.url"; //$NON-NLS-1$
+	public final static String PREF_IPFS_API_URL_LABEL = Messages.Bpmn2Preferences_IPFS_Api_Url;
+	public final static String PREF_IPFS_API_URL_DEFAULT = "http://127.0.0.1:5001"; //$NON-NLS-1$
+	public final static String PREF_IPFS_DEFAULT_LOAD_REFERENCE = "ipfs.default.load.reference"; //$NON-NLS-1$
+	public final static String PREF_IPFS_DEFAULT_LOAD_REFERENCE_LABEL = Messages.Bpmn2Preferences_IPFS_Default_Load_Reference;
+	public final static String PREF_IPFS_PUBLISH_MODE = "ipfs.publish.mode"; //$NON-NLS-1$
+	public final static String PREF_IPFS_PUBLISH_MODE_LABEL = Messages.Bpmn2Preferences_IPFS_Publish_Mode;
+	public final static String PREF_IPFS_PUBLISH_MODE_CID = "cid"; //$NON-NLS-1$
+	public final static String PREF_IPFS_PUBLISH_MODE_IPNS = "ipns"; //$NON-NLS-1$
+	public final static String PREF_IPFS_DEFAULT_IPNS_KEY = "ipfs.default.ipns.key"; //$NON-NLS-1$
+	public final static String PREF_IPFS_DEFAULT_IPNS_KEY_LABEL = Messages.Bpmn2Preferences_IPFS_Default_IPNS_Key;
+	// EcoreFS end: project-scoped IPFS preference keys used by the BPMN2 UI actions
 	
 	private static Hashtable<IProject,Bpmn2Preferences> projectPreferenceCacheMap = null;
 	private static Bpmn2Preferences instancePreferenceCache = null;
@@ -1325,6 +1338,55 @@ public class Bpmn2Preferences implements IResourceChangeListener, IPropertyChang
 		putInt(PREF_TEXT_LIMIT, value);
 		textLimit = value;
 	}
+
+	// EcoreFS begin: helper accessors for the BPMN2 Modeler IPFS project settings
+	public String getIpfsApiUrl() {
+		String value = get(PREF_IPFS_API_URL, PREF_IPFS_API_URL_DEFAULT);
+		if (value == null || value.trim().isEmpty()) {
+			return PREF_IPFS_API_URL_DEFAULT;
+		}
+		return value.trim();
+	}
+
+	public void setIpfsApiUrl(String value) {
+		put(PREF_IPFS_API_URL, value == null ? PREF_IPFS_API_URL_DEFAULT : value.trim());
+	}
+
+	public String getIpfsDefaultLoadReference() {
+		String value = get(PREF_IPFS_DEFAULT_LOAD_REFERENCE, ""); //$NON-NLS-1$
+		return value == null ? "" : value.trim(); //$NON-NLS-1$
+	}
+
+	public void setIpfsDefaultLoadReference(String value) {
+		put(PREF_IPFS_DEFAULT_LOAD_REFERENCE, value == null ? "" : value.trim()); //$NON-NLS-1$
+	}
+
+	public String getIpfsPublishMode() {
+		String value = get(PREF_IPFS_PUBLISH_MODE, PREF_IPFS_PUBLISH_MODE_CID);
+		if (PREF_IPFS_PUBLISH_MODE_IPNS.equalsIgnoreCase(value)) {
+			return PREF_IPFS_PUBLISH_MODE_IPNS;
+		}
+		return PREF_IPFS_PUBLISH_MODE_CID;
+	}
+
+	public void setIpfsPublishMode(String value) {
+		if (PREF_IPFS_PUBLISH_MODE_IPNS.equalsIgnoreCase(value)) {
+			put(PREF_IPFS_PUBLISH_MODE, PREF_IPFS_PUBLISH_MODE_IPNS);
+		}
+		else {
+			put(PREF_IPFS_PUBLISH_MODE, PREF_IPFS_PUBLISH_MODE_CID);
+		}
+	}
+
+	public String getIpfsDefaultIpnsKey() {
+		String value = get(PREF_IPFS_DEFAULT_IPNS_KEY, ""); //$NON-NLS-1$
+		return value == null ? "" : value.trim(); //$NON-NLS-1$
+	}
+
+	public void setIpfsDefaultIpnsKey(String value) {
+		put(PREF_IPFS_DEFAULT_IPNS_KEY, value == null ? "" : value.trim()); //$NON-NLS-1$
+	}
+	// EcoreFS end: helper accessors for the BPMN2 Modeler IPFS project settings
 	
 	// this is temporary until the connection routing has been proven reliable
 	static boolean enableConnectionRouting = true;

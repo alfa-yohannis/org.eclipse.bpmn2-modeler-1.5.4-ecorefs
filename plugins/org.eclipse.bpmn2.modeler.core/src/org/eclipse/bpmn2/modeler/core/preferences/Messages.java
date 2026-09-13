@@ -47,6 +47,12 @@ public class Messages extends NLS {
 	public static String Bpmn2Preferences_True_if_not_set;
 	public static String Bpmn2Preferences_Resolve_Externals;
 	public static String Bpmn2Preferences_Text_Limit;
+	// EcoreFS begin: project-scoped IPFS preference labels
+	public static String Bpmn2Preferences_IPFS_Api_Url;
+	public static String Bpmn2Preferences_IPFS_Default_Load_Reference;
+	public static String Bpmn2Preferences_IPFS_Publish_Mode;
+	public static String Bpmn2Preferences_IPFS_Default_IPNS_Key;
+	// EcoreFS end: project-scoped IPFS preference labels
 	
 	public static String ShapeStyle_Category_Connections;
 	public static String ShapeStyle_Category_Shapes;

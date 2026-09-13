@@ -28,7 +28,9 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.PropertyPage;
 import org.osgi.service.prefs.BackingStoreException;
 
@@ -39,6 +41,12 @@ public class Bpmn2PropertyPage extends PropertyPage {
 	private Combo cboRuntimes;
 	private Button btnCheckProjectNature;
 	private Button addRemoveProjectNature;
+	// EcoreFS begin: project-scoped IPFS/IPNS controls stored on the BPMN2 property page
+	private Text txtIpfsApiUrl;
+	private Text txtIpfsDefaultLoadReference;
+	private Combo cboIpfsPublishMode;
+	private Text txtIpfsDefaultIpnsKey;
+	// EcoreFS end: project-scoped IPFS/IPNS controls stored on the BPMN2 property page
 	private IProject project;
 	
 	public Bpmn2PropertyPage() {
@@ -92,6 +100,37 @@ public class Bpmn2PropertyPage extends PropertyPage {
 		btnCheckProjectNature.setText(Bpmn2Preferences.PREF_CHECK_PROJECT_NATURE_LABEL);
 		btnCheckProjectNature.setEnabled(!enabled);
 
+		// EcoreFS begin: project-scoped IPFS/IPNS settings for the BPMN2 Modeler UI actions
+		Group ipfsGroup = new Group(container, SWT.NONE);
+		ipfsGroup.setText(Messages.Bpmn2PropertyPage_IPFS_Group);
+		ipfsGroup.setLayout(new GridLayout(2, false));
+		GridData ipfsGroupData = new GridData(SWT.FILL, SWT.CENTER, true, false, 3, 1);
+		ipfsGroup.setLayoutData(ipfsGroupData);
+
+		createLabel(ipfsGroup, Bpmn2Preferences.PREF_IPFS_API_URL_LABEL);
+		txtIpfsApiUrl = createText(ipfsGroup);
+
+		createLabel(ipfsGroup, Bpmn2Preferences.PREF_IPFS_DEFAULT_LOAD_REFERENCE_LABEL);
+		txtIpfsDefaultLoadReference = createText(ipfsGroup);
+
+		createLabel(ipfsGroup, Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_LABEL);
+		cboIpfsPublishMode = new Combo(ipfsGroup, SWT.DROP_DOWN | SWT.READ_ONLY);
+		cboIpfsPublishMode.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		cboIpfsPublishMode.add(Messages.Bpmn2PropertyPage_IPFS_Publish_Mode_CID);
+		cboIpfsPublishMode.setData(Messages.Bpmn2PropertyPage_IPFS_Publish_Mode_CID, Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_CID);
+		cboIpfsPublishMode.add(Messages.Bpmn2PropertyPage_IPFS_Publish_Mode_IPNS);
+		cboIpfsPublishMode.setData(Messages.Bpmn2PropertyPage_IPFS_Publish_Mode_IPNS, Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_IPNS);
+		cboIpfsPublishMode.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				updateIpnsFieldEnablement();
+			}
+		});
+
+		createLabel(ipfsGroup, Bpmn2Preferences.PREF_IPFS_DEFAULT_IPNS_KEY_LABEL);
+		txtIpfsDefaultIpnsKey = createText(ipfsGroup);
+		// EcoreFS end: project-scoped IPFS/IPNS settings for the BPMN2 Modeler UI actions
+
 		initData();
 
 		return container;
@@ -99,6 +138,12 @@ public class Bpmn2PropertyPage extends PropertyPage {
 
 	private void restoreDefaults() {
 		preferences.setToDefault(Bpmn2Preferences.PREF_TARGET_RUNTIME);
+		// EcoreFS begin: reset project-scoped IPFS settings to their default values
+		preferences.setToDefault(Bpmn2Preferences.PREF_IPFS_API_URL);
+		preferences.setToDefault(Bpmn2Preferences.PREF_IPFS_DEFAULT_LOAD_REFERENCE);
+		preferences.setToDefault(Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE);
+		preferences.setToDefault(Bpmn2Preferences.PREF_IPFS_DEFAULT_IPNS_KEY);
+		// EcoreFS end: reset project-scoped IPFS settings to their default values
 		preferences.getRuntime();
 		initData();
 	}
@@ -119,6 +164,7 @@ public class Bpmn2PropertyPage extends PropertyPage {
 		btnCheckProjectNature.setSelection( preferences.getCheckProjectNature() );
 		
 		TargetRuntime rt = preferences.getRuntime();
+		cboRuntimes.removeAll();
 		int i = 0;
 		for (TargetRuntime r : TargetRuntime.createTargetRuntimes()) {
 			cboRuntimes.add(r.getName());
@@ -127,6 +173,19 @@ public class Bpmn2PropertyPage extends PropertyPage {
 				cboRuntimes.select(i);
 			++i;
 		}
+
+		// EcoreFS begin: initialize project-scoped IPFS settings from stored preferences
+		txtIpfsApiUrl.setText(preferences.getIpfsApiUrl());
+		txtIpfsDefaultLoadReference.setText(preferences.getIpfsDefaultLoadReference());
+		txtIpfsDefaultIpnsKey.setText(preferences.getIpfsDefaultIpnsKey());
+		if (Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_IPNS.equals(preferences.getIpfsPublishMode())) {
+			cboIpfsPublishMode.select(1);
+		}
+		else {
+			cboIpfsPublishMode.select(0);
+		}
+		updateIpnsFieldEnablement();
+		// EcoreFS end: initialize project-scoped IPFS settings from stored preferences
 	}
 
 	@Override
@@ -151,7 +210,39 @@ public class Bpmn2PropertyPage extends PropertyPage {
 		TargetRuntime rt = TargetRuntime.createTargetRuntimes().get(i);
 		preferences.setRuntime(rt);
 		preferences.setCheckProjectNature(btnCheckProjectNature.getSelection());
+		// EcoreFS begin: persist project-scoped IPFS settings so the UI actions can reuse them
+		preferences.setIpfsApiUrl(txtIpfsApiUrl.getText());
+		preferences.setIpfsDefaultLoadReference(txtIpfsDefaultLoadReference.getText());
+		if (cboIpfsPublishMode.getSelectionIndex() == 1) {
+			preferences.setIpfsPublishMode(Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_IPNS);
+		}
+		else {
+			preferences.setIpfsPublishMode(Bpmn2Preferences.PREF_IPFS_PUBLISH_MODE_CID);
+		}
+		preferences.setIpfsDefaultIpnsKey(txtIpfsDefaultIpnsKey.getText());
+		// EcoreFS end: persist project-scoped IPFS settings so the UI actions can reuse them
 		
 		preferences.flush();
 	}
+
+	// EcoreFS begin: local helpers keep the new IPFS settings controls compact and readable
+	private void createLabel(Composite parent, String text) {
+		Label label = new Label(parent, SWT.NONE);
+		label.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+		label.setText(text);
+	}
+
+	private Text createText(Composite parent) {
+		Text text = new Text(parent, SWT.BORDER);
+		text.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+		return text;
+	}
+
+	private void updateIpnsFieldEnablement() {
+		boolean ipnsEnabled = cboIpfsPublishMode != null && cboIpfsPublishMode.getSelectionIndex() == 1;
+		if (txtIpfsDefaultIpnsKey != null) {
+			txtIpfsDefaultIpnsKey.setEnabled(ipnsEnabled);
+		}
+	}
+	// EcoreFS end: local helpers keep the new IPFS settings controls compact and readable
 }

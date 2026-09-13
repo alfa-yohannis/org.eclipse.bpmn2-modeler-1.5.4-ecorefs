@@ -103,6 +103,11 @@ public class Messages extends NLS {
 	public static String Bpmn2PropertyPage_Enable_BPMN2_Project_Nature;
 
 	public static String Bpmn2PropertyPage_HomePage_Description;
+	// EcoreFS begin: project property page labels for IPFS integration
+	public static String Bpmn2PropertyPage_IPFS_Group;
+	public static String Bpmn2PropertyPage_IPFS_Publish_Mode_CID;
+	public static String Bpmn2PropertyPage_IPFS_Publish_Mode_IPNS;
+	// EcoreFS end: project property page labels for IPFS integration
 	public static String Bpmn2PreferencePage_HomePage_Resolve_Externals_Always;
 	public static String Bpmn2PreferencePage_HomePage_Resolve_Externals_Never;
 	public static String Bpmn2PreferencePage_HomePage_Resolve_Externals_Prompt;
