@@ -20,6 +20,6 @@ Require-Bundle: org.eclipse.ui.ide,
  org.eclipse.bpmn2,
  org.apache.xerces
 Bundle-ActivationPolicy: lazy
-Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Import-Package: org.eclipse.core.resources
 Automatic-Module-Name: org.eclipse.bpmn2.modeler.examples.dynamic

@@ -81,7 +81,7 @@ public final class IPFSModelTransferSelfTest {
 	}
 
 	private static void testDocumentationMentionsIpfsActions(Path repoRoot) throws Exception {
-		String doc = read(repoRoot.resolve("IPFS-UI.md")); //$NON-NLS-1$
+		String doc = read(repoRoot.resolve("README.md")); //$NON-NLS-1$
 		assertContains(doc, "Open BPMN2 Model from IPFS", "documentation should mention the open action"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "Publish Current BPMN2 Model to IPFS", "documentation should mention the publish action"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "Open BPMN2 Project from IPFS", "documentation should mention the project open action"); //$NON-NLS-1$ //$NON-NLS-2$

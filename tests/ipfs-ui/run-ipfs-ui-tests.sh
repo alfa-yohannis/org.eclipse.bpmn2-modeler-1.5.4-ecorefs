@@ -8,7 +8,7 @@ BUILD_DIR="$SCRIPT_DIR/build"
 
 mkdir -p "$BUILD_DIR"
 
-javac -d "$BUILD_DIR" \
+javac --release 17 -d "$BUILD_DIR" \
   "$REPO_ROOT/plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/util/IPFSModelTransfer.java" \
   "$SCRIPT_DIR/src/org/eclipse/bpmn2/modeler/ui/tests/IPFSModelTransferSelfTest.java"
 
