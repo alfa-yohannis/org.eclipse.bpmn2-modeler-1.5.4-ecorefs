@@ -108,9 +108,41 @@ public class ImportUtil {
 		if (location==null) {
 			location = ""; //$NON-NLS-1$
 		}
-		uri = URI.createURI(location);
+		// EcoreFS begin: resolve a relative import location against the importing file
+		// uri = URI.createURI(location);
+		uri = resolveAgainstImportingFile(imp, URI.createURI(location));
+		// EcoreFS end
 		return loadImport(uri,kind);
 	}
+
+	// EcoreFS begin: resolve a relative import location against the importing file
+	/**
+	 * Resolves the location of an import against the URI of the file that declares
+	 * the import. A model usually imports a file next to it with a relative location
+	 * such as "payment-process.bpmn". Left relative, EMF reads that location from
+	 * the working directory of the JVM, so the editor either fails with "Cannot load
+	 * Resource" or loads an unrelated file of the same name. A Java import names a
+	 * class instead of a file and keeps its location.
+	 *
+	 * @param imp the import that declares the location
+	 * @param location the location as written in the import
+	 * @return the location resolved against the importing file, or the location
+	 *         itself when it is empty, absolute or a class name, or when the
+	 *         importing file has no absolute hierarchical URI
+	 */
+	private static URI resolveAgainstImportingFile(Import imp, URI location) {
+		Resource importingResource = imp.eResource();
+		if (location.isEmpty() || !location.isRelative() || importingResource == null
+				|| IMPORT_TYPE_JAVA.equals(imp.getImportType())) {
+			return location;
+		}
+		URI importingFile = importingResource.getURI();
+		if (importingFile == null || importingFile.isRelative() || !importingFile.isHierarchical()) {
+			return location;
+		}
+		return location.resolve(importingFile);
+	}
+	// EcoreFS end
 	
 	public Import findImportForNamespace(Resource resource, String namespace) {
 		if (namespace!=null && !namespace.isEmpty()) {
