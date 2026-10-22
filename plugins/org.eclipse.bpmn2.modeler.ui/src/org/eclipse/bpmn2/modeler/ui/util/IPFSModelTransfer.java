@@ -78,9 +78,18 @@ public final class IPFSModelTransfer {
 		return downloadToTempModel(reference, null);
 	}
 
+	/**
+	 * Downloads a model into a new temporary directory, for when the workspace
+	 * offers no folder to keep it. The file is named after the model by
+	 * {@link IPFSModelFileName}, and the directory keeps that name free of the
+	 * random suffix a temporary file would get.
+	 */
 	public static File downloadToTempModel(String reference, String apiUrl) throws IOException {
 		byte[] bytes = downloadBytes(reference, apiUrl);
-		File tempFile = File.createTempFile(deriveTempPrefix(reference), ".bpmn"); //$NON-NLS-1$
+		// EcoreFS begin: a temporary directory keeps the readable file name free of random suffixes
+		File directory = Files.createTempDirectory("ipfs-model-").toFile(); //$NON-NLS-1$
+		File tempFile = new File(directory, IPFSModelFileName.derive(reference, bytes) + ".bpmn"); //$NON-NLS-1$
+		// EcoreFS end: a temporary directory keeps the readable file name free of random suffixes
 		try (OutputStream output = new FileOutputStream(tempFile)) {
 			output.write(bytes);
 		}
@@ -244,19 +253,6 @@ public final class IPFSModelTransfer {
 	private static String createGatewayUrl(String path, String apiUrl) {
 		String gatewayBase = apiUrl.replace(":5001", ":8080"); //$NON-NLS-1$ //$NON-NLS-2$
 		return gatewayBase + path;
-	}
-
-	private static String deriveTempPrefix(String reference) {
-		String prefix = reference == null ? "ipfs-model" : reference.trim(); //$NON-NLS-1$
-		prefix = prefix.replaceAll("^[^a-zA-Z0-9]+", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		prefix = prefix.replaceAll("[^a-zA-Z0-9._-]", "_"); //$NON-NLS-1$ //$NON-NLS-2$
-		if (prefix.length() < 3) {
-			prefix = "ipfs-model"; //$NON-NLS-1$
-		}
-		if (prefix.length() > 48) {
-			prefix = prefix.substring(0, 48);
-		}
-		return prefix;
 	}
 
 	private static byte[] readAllBytes(InputStream input) throws IOException {

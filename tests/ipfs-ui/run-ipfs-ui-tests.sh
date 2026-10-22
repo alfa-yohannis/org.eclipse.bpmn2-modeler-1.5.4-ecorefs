@@ -10,6 +10,8 @@ mkdir -p "$BUILD_DIR"
 
 javac --release 17 -d "$BUILD_DIR" \
   "$REPO_ROOT/plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/util/IPFSModelTransfer.java" \
+  "$REPO_ROOT/plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/util/IPFSModelFileName.java" \
+  "$REPO_ROOT/plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/util/BpmnModelNames.java" \
   "$SCRIPT_DIR/src/org/eclipse/bpmn2/modeler/ui/tests/IPFSModelTransferSelfTest.java"
 
 java -cp "$BUILD_DIR" org.eclipse.bpmn2.modeler.ui.tests.IPFSModelTransferSelfTest "$REPO_ROOT" "$@"

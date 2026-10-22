@@ -1,14 +1,13 @@
 package org.eclipse.bpmn2.modeler.ui.commands;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import org.eclipse.bpmn2.modeler.core.builder.BPMN2Nature;
 import org.eclipse.bpmn2.modeler.core.preferences.Bpmn2Preferences;
 import org.eclipse.bpmn2.modeler.ui.editor.BPMN2Editor;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -16,8 +15,12 @@ import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceVisitor;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -26,6 +29,7 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import org.eclipse.bpmn2.modeler.ui.util.IPFSModelFileName;
 import org.eclipse.bpmn2.modeler.ui.util.IPFSModelTransfer;
 
 // EcoreFS begin: shared workspace helpers keep the single-file and project-level IPFS commands consistent
@@ -101,24 +105,15 @@ final class IPFSWorkspaceResourceSupport {
 		return null;
 	}
 
+	/**
+	 * Downloads a model into a workspace container. The file is named after the
+	 * model, because a CID does not record the name it was published under, and
+	 * gets a numbered suffix when that name is taken.
+	 */
 	static IFile downloadToWorkspaceFile(String reference, String apiUrl, IContainer container) throws Exception {
-		File downloadedFile = IPFSModelTransfer.downloadToTempModel(reference, apiUrl);
-		try {
-			IFile targetFile = createUniqueTargetFile(container, deriveWorkspaceFileBaseName(reference), "bpmn"); //$NON-NLS-1$
-			try (InputStream input = new FileInputStream(downloadedFile)) {
-				if (targetFile.exists()) {
-					targetFile.setContents(input, IResource.FORCE, new NullProgressMonitor());
-				} else {
-					targetFile.create(input, IResource.FORCE, new NullProgressMonitor());
-				}
-			}
-			targetFile.refreshLocal(IResource.DEPTH_ZERO, new NullProgressMonitor());
-			return targetFile;
-		} finally {
-			if (downloadedFile.exists()) {
-				downloadedFile.delete();
-			}
-		}
+		byte[] contents = IPFSModelTransfer.downloadBytes(reference, apiUrl);
+		IFile targetFile = createUniqueTargetFile(container, IPFSModelFileName.derive(reference, contents), "bpmn"); //$NON-NLS-1$
+		return writeWorkspaceFile(container, targetFile.getName(), contents);
 	}
 
 	static IFile writeWorkspaceFile(IContainer container, String relativePath, byte[] contents) throws Exception {
@@ -156,6 +151,39 @@ final class IPFSWorkspaceResourceSupport {
 		folder.create(true, true, new NullProgressMonitor());
 		return folder;
 	}
+
+	// EcoreFS begin: new workspace project for imports that have no target container
+	/**
+	 * Creates and opens a project for an import that has nowhere else to go,
+	 * for example in an empty workspace. The project is named after
+	 * {@code baseName}, with a numbered suffix when a project or a leftover
+	 * directory already uses that name, and gets the BPMN2 nature so the user
+	 * is not asked to add it on the first save.
+	 */
+	static IProject createUniqueProject(String baseName) throws CoreException {
+		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+		String name = baseName == null ? "" : baseName.trim(); //$NON-NLS-1$
+		if (name.isEmpty() || !root.getWorkspace().validateName(name, IResource.PROJECT).isOK()) {
+			name = normalizeFolderBaseName(baseName);
+		}
+		IProject project = root.getProject(name);
+		int suffix = 1;
+		// Skip names that belong to a project or to a leftover directory in the workspace location
+		while (project.exists() || root.getLocation().append(project.getName()).toFile().exists()) {
+			project = root.getProject(name + "-" + suffix); //$NON-NLS-1$
+			suffix++;
+		}
+		project.create(new NullProgressMonitor());
+		project.open(new NullProgressMonitor());
+
+		// The BPMN2 nature adds the model validation builder and spares the user the
+		// "add the BPMN2 nature?" question on the first save
+		IProjectDescription description = project.getDescription();
+		description.setNatureIds(new String[] { BPMN2Nature.NATURE_ID });
+		project.setDescription(description, new NullProgressMonitor());
+		return project;
+	}
+	// EcoreFS end: new workspace project for imports that have no target container
 
 	static List<IFile> collectBpmnFiles(IContainer root) throws Exception {
 		final List<IFile> files = new ArrayList<IFile>();
@@ -216,27 +244,6 @@ final class IPFSWorkspaceResourceSupport {
 			suffix++;
 		}
 		return file;
-	}
-
-	private static String deriveWorkspaceFileBaseName(String reference) {
-		String baseName = reference == null ? "ipfs-model" : reference.trim(); //$NON-NLS-1$
-		baseName = baseName.replace('\\', '/');
-		int lastSlash = baseName.lastIndexOf('/');
-		if (lastSlash >= 0 && lastSlash + 1 < baseName.length()) {
-			baseName = baseName.substring(lastSlash + 1);
-		}
-		baseName = baseName.replaceAll("^ipfs://", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		baseName = baseName.replaceAll("^ipns://", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		baseName = baseName.replaceAll("\\.bpmn2?$", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		baseName = baseName.replaceAll("^[^a-zA-Z0-9]+", "ipfs-"); //$NON-NLS-1$ //$NON-NLS-2$
-		baseName = baseName.replaceAll("[^a-zA-Z0-9._-]", "_"); //$NON-NLS-1$ //$NON-NLS-2$
-		if (baseName.isEmpty()) {
-			baseName = "ipfs-model"; //$NON-NLS-1$
-		}
-		if (baseName.length() > 80) {
-			baseName = baseName.substring(0, 80);
-		}
-		return baseName;
 	}
 
 	private static String normalizeFolderBaseName(String baseName) {

@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+import org.eclipse.bpmn2.modeler.ui.util.IPFSModelFileName;
 import org.eclipse.bpmn2.modeler.ui.util.IPFSModelTransfer;
 
 // EcoreFS begin: standalone self-test coverage for the BPMN2 Modeler IPFS UI integration
@@ -14,6 +15,7 @@ public final class IPFSModelTransferSelfTest {
 	private static final String CID_V0 = "Qmbu2ygFf6afXUGiCQA4XigYNCUGHfYWyy7Kq2feBbrmjr"; //$NON-NLS-1$
 	private static final String CID_V1 = "bafkreihfghwnguzrukv42vo5s45f2lbmm5p5i3bdzxo3n25ua2hdjcrqtu"; //$NON-NLS-1$
 	private static final String IPNS_KEY = "k51qzi5uqu5dhr6ajtiqw195ua6t6oxzomdwdk3kaitjtt0kawac51cazg3yro"; //$NON-NLS-1$
+	private static final String BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"; //$NON-NLS-1$
 
 	private IPFSModelTransferSelfTest() {
 	}
@@ -28,6 +30,7 @@ public final class IPFSModelTransferSelfTest {
 
 		testNormalizeReferenceSupportsCidAndIpnsForms();
 		testNormalizeReferenceRejectsInvalidInput();
+		testModelFileNamesAreReadable();
 		testPluginXmlRegistersIpfsCommands(repoRoot);
 		testManifestIncludesFilesystemDependencyAndQualifierVersion(repoRoot);
 		testProjectPropertiesExposeIpfsSettings(repoRoot);
@@ -59,6 +62,48 @@ public final class IPFSModelTransferSelfTest {
 		assertThrows("not-a-cid"); //$NON-NLS-1$
 		assertThrows("   "); //$NON-NLS-1$
 		assertThrows(null);
+	}
+
+	/**
+	 * Checks the order in which a downloaded model's file name is chosen, the
+	 * cleanup of characters that file systems reject, the CID fallback, and that
+	 * reading the model never resolves an external entity.
+	 */
+	private static void testModelFileNamesAreReadable() {
+		String process = "<bpmn2:process id=\"Process_1\" name=\"Order Handling\"/>"; //$NON-NLS-1$
+		assertEquals("Claims", IPFSModelFileName.derive(CID_V1, model(" name=\"Claims\"", process)), //$NON-NLS-1$ //$NON-NLS-2$
+				"the definitions name should come first"); //$NON-NLS-1$
+		assertEquals("Supply Chain", IPFSModelFileName.derive(CID_V1, //$NON-NLS-1$
+				model("", "<bpmn2:collaboration id=\"C\" name=\"Supply Chain\"/>" + process)), //$NON-NLS-1$ //$NON-NLS-2$
+				"the collaboration name should come before process names"); //$NON-NLS-1$
+		assertEquals("Order Handling", IPFSModelFileName.derive(CID_V1, model("", process)), //$NON-NLS-1$ //$NON-NLS-2$
+				"the process name should name the file"); //$NON-NLS-1$
+		assertEquals("VacationRequest", IPFSModelFileName.derive(CID_V1, //$NON-NLS-1$
+				model("", "<bpmn2:process id=\"VacationRequest\" name=\"Default Process\"/>")), //$NON-NLS-1$ //$NON-NLS-2$
+				"a meaningful process id should beat an editor placeholder"); //$NON-NLS-1$
+		assertEquals("Default Process", IPFSModelFileName.derive(CID_V1, //$NON-NLS-1$
+				model("", "<bpmn2:process id=\"Process_1\" name=\"Default Process\"/>")), //$NON-NLS-1$ //$NON-NLS-2$
+				"a placeholder should still beat the CID"); //$NON-NLS-1$
+		assertEquals("Ship_ A_B_", IPFSModelFileName.derive(CID_V1, //$NON-NLS-1$
+				model("", "<bpmn2:process id=\"P\" name=\"Ship: A/B?\"/>")), //$NON-NLS-1$ //$NON-NLS-2$
+				"characters that file systems reject should be replaced"); //$NON-NLS-1$
+		assertEquals("Vacation", IPFSModelFileName.derive("/ipfs/" + CID_V1 + "/models/Vacation.bpmn", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				model("", process)), "a file name in the reference should win"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertEquals(CID_V1, IPFSModelFileName.derive(CID_V1, model("", "<bpmn2:message id=\"M\"/>")), //$NON-NLS-1$ //$NON-NLS-2$
+				"a model without names should keep the CID"); //$NON-NLS-1$
+		assertEquals(IPNS_KEY, IPFSModelFileName.derive(IPNS_KEY, "not xml".getBytes(StandardCharsets.UTF_8)), //$NON-NLS-1$
+				"content that is not XML should keep the IPNS name"); //$NON-NLS-1$
+		byte[] externalEntity = ("<?xml version=\"1.0\"?><!DOCTYPE d [<!ENTITY x SYSTEM \"file:///etc/hostname\">]>" //$NON-NLS-1$
+				+ "<bpmn2:definitions xmlns:bpmn2=\"" + BPMN_NS + "\" name=\"&x;\"/>").getBytes(StandardCharsets.UTF_8); //$NON-NLS-1$ //$NON-NLS-2$
+		assertEquals(CID_V1, IPFSModelFileName.derive(CID_V1, externalEntity),
+				"external entities must never be resolved"); //$NON-NLS-1$
+	}
+
+	/** Builds a minimal BPMN document with the given definitions attributes and root elements. */
+	private static byte[] model(String definitionsAttributes, String rootElements) {
+		return ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><bpmn2:definitions xmlns:bpmn2=\"" + BPMN_NS //$NON-NLS-1$
+				+ "\" id=\"Definitions_1\"" + definitionsAttributes + ">" + rootElements + "</bpmn2:definitions>") //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+						.getBytes(StandardCharsets.UTF_8);
 	}
 
 	private static void testPluginXmlRegistersIpfsCommands(Path repoRoot) throws Exception {
@@ -119,6 +164,8 @@ public final class IPFSModelTransferSelfTest {
 				"plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/commands/IPFSOpenProjectCommand.java")); //$NON-NLS-1$
 		assertContains(openProject, "IPFSProjectManifest", "project open should consume the BPMN project manifest"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(openProject, "createUniqueFolder", "project open should restore into a workspace folder"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(openProject, "createUniqueProject", //$NON-NLS-1$
+				"project open should create a project when no workspace container is available"); //$NON-NLS-1$
 
 		String publishProject = read(repoRoot.resolve(
 				"plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/commands/IPFSPublishProjectCommand.java")); //$NON-NLS-1$
@@ -154,6 +201,8 @@ public final class IPFSModelTransferSelfTest {
 		try {
 			IPFSModelTransfer.PublicationResult result = IPFSModelTransfer.publish(sample.toFile());
 			downloaded = IPFSModelTransfer.downloadToTempModel(result.getCid());
+			assertEquals("VacationRequest.bpmn", downloaded.getName(), //$NON-NLS-1$
+					"the downloaded model should be named after the model, not the CID"); //$NON-NLS-1$
 			byte[] originalBytes = Files.readAllBytes(sample);
 			byte[] downloadedBytes = Files.readAllBytes(downloaded.toPath());
 			if (!Arrays.equals(originalBytes, downloadedBytes)) {
@@ -162,6 +211,7 @@ public final class IPFSModelTransferSelfTest {
 		} finally {
 			if (downloaded != null && downloaded.exists()) {
 				downloaded.delete();
+				downloaded.getParentFile().delete();
 			}
 		}
 	}

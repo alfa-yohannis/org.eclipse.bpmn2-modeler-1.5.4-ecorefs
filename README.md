@@ -25,6 +25,10 @@ IPFS is exposed through two explicit UI actions instead:
 - fetches the BPMN XML through Kubo
 - writes it into the selected workspace folder, the active model folder, or the active project when one is available
 - falls back to a temporary local `.bpmn` file only when there is no usable active workspace location
+<!-- EcoreFS begin: readable names for downloaded models -->
+- names the file after the model, because a CID does not record the name it was published under: the definitions name, the collaboration name, the first process name, or the first process id, in that order; editor placeholders such as `Default Process` or `Process_1` are used only when nothing better exists, and the CID only when the model has no names
+- keeps the file name of a reference that ends in one, such as `/ipfs/<cid>/order.bpmn`, and appends `-1`, `-2`, ... when the name is taken
+<!-- EcoreFS end: readable names for downloaded models -->
 - opens the persisted file in the existing BPMN2 editor flow
 
 `Publish Current BPMN2 Model to IPFS...`
@@ -50,7 +54,10 @@ IPFS is exposed through two explicit UI actions instead:
 - accepts a BPMN project manifest reference
 - downloads the manifest JSON
 - restores all listed `.bpmn` files into a new workspace folder under the active project or selected folder
-- opens the manifest root model after the import completes
+<!-- EcoreFS begin: project import into a new workspace project -->
+- creates a new workspace project named after the published project when nothing is selected and no BPMN editor is open, for example when the Project Explorer is empty; the project gets the BPMN2 nature, and `-1`, `-2`, ... is appended when the name is taken
+<!-- EcoreFS end: project import into a new workspace project -->
+- opens the manifest root model after the import completes and selects it in the Project Explorer
 
 ## Kubo Configuration
 

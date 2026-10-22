@@ -11,7 +11,6 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IInputValidator;
 import org.eclipse.jface.dialogs.InputDialog;
@@ -22,12 +21,19 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.ide.IDE;
+import org.eclipse.ui.wizards.newresource.BasicNewResourceWizard;
 
 // EcoreFS begin: command that restores a published multi-file BPMN project manifest into the workspace
 public class IPFSOpenProjectCommand extends AbstractHandler {
 
 	public static final String ID = "org.eclipse.bpmn2.modeler.command.openProjectFromIpfs"; //$NON-NLS-1$
 
+	/**
+	 * Asks for a project manifest reference, restores every model it lists and
+	 * opens the root model. The models go into a new folder of the selected
+	 * project or folder, or into a new project when nothing in the workspace is
+	 * selected or open.
+	 */
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		InputDialog dialog = new InputDialog(HandlerUtil.getActiveShell(event), Messages.IPFS_Project_Open_Title,
@@ -50,11 +56,6 @@ public class IPFSOpenProjectCommand extends AbstractHandler {
 
 		try {
 			IContainer targetContainer = IPFSWorkspaceResourceSupport.resolveTargetContainer(event);
-			if (targetContainer == null || !targetContainer.isAccessible()) {
-				MessageDialog.openError(HandlerUtil.getActiveShell(event), Messages.IPFS_Project_Open_Error_Title,
-						Messages.IPFS_Project_Open_No_Target);
-				return null;
-			}
 
 			IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 			if (window == null || window.getActivePage() == null) {
@@ -67,24 +68,33 @@ public class IPFSOpenProjectCommand extends AbstractHandler {
 					StandardCharsets.UTF_8);
 			IPFSProjectManifest manifest = IPFSProjectManifest.fromJson(manifestJson);
 
-			IFolder importFolder = IPFSWorkspaceResourceSupport.createUniqueFolder(targetContainer,
-					deriveImportFolderName(manifest));
+			// EcoreFS begin: restore into a new project when nothing in the workspace is selected or open,
+			// for example when the Project Explorer is empty
+			IContainer importContainer;
+			if (targetContainer != null && targetContainer.isAccessible()) {
+				importContainer = IPFSWorkspaceResourceSupport.createUniqueFolder(targetContainer,
+						deriveImportFolderName(manifest));
+			} else {
+				importContainer = IPFSWorkspaceResourceSupport.createUniqueProject(deriveProjectName(manifest));
+			}
+			// EcoreFS end: restore into a new project when nothing in the workspace is selected or open
 			IFile rootFile = null;
 			for (ModelEntry model : manifest.getModels()) {
 				byte[] bytes = IPFSModelTransfer.downloadBytes(model.getCid(), apiUrl);
-				IFile file = IPFSWorkspaceResourceSupport.writeWorkspaceFile(importFolder, model.getPath(), bytes);
+				IFile file = IPFSWorkspaceResourceSupport.writeWorkspaceFile(importContainer, model.getPath(), bytes);
 				if (manifest.getRootModel().equals(model.getPath())) {
 					rootFile = file;
 				}
 			}
 
 			if (rootFile == null) {
-				rootFile = importFolder.getFile(new Path(manifest.getRootModel()));
+				rootFile = importContainer.getFile(new Path(manifest.getRootModel()));
 			}
 			if (!rootFile.exists()) {
 				throw new ExecutionException("Root model file was not found after import: " //$NON-NLS-1$
 						+ manifest.getRootModel());
 			}
+			BasicNewResourceWizard.selectAndReveal(rootFile, window);
 			IDE.openEditor(page, rootFile);
 			return null;
 		} catch (Exception e) {
@@ -101,6 +111,19 @@ public class IPFSOpenProjectCommand extends AbstractHandler {
 			base = manifest.getRootModel();
 		}
 		return "ipfs-project-" + base; //$NON-NLS-1$
+	}
+
+	/**
+	 * Returns the name for a project created by the import: the name the project
+	 * was published under, or the root model's file name when the manifest
+	 * records none.
+	 */
+	private String deriveProjectName(IPFSProjectManifest manifest) {
+		String name = manifest.getProjectName();
+		if (name == null || name.trim().isEmpty()) {
+			name = new Path(manifest.getRootModel()).removeFileExtension().lastSegment();
+		}
+		return name;
 	}
 }
 // EcoreFS end: command that restores a published multi-file BPMN project manifest into the workspace
