@@ -48,6 +48,25 @@ public class Messages extends NLS {
 	public static String IPFS_Project_Publish_Manifest_Details;
 	public static String IPFS_Project_Publish_Manifest_Details_With_IPNS;
 	// EcoreFS end: message keys for the IPFS UI actions
+	// EcoreFS begin: message keys for publishing with cascade and for downloads into namespace folders
+	public static String IPFS_Cascade_Error_Title;
+	public static String IPFS_Cascade_No_Workspace_File;
+	public static String IPFS_Cascade_Unsaved_Editors;
+	public static String IPFS_Cascade_Confirm_Title;
+	public static String IPFS_Cascade_Confirm_Message;
+	public static String IPFS_Cascade_Pinned_Version;
+	public static String IPFS_Cascade_Success_Title;
+	public static String IPFS_Cascade_Result_Message;
+	public static String IPFS_Cascade_No_Importers;
+	public static String IPFS_Cascade_Result_Cid;
+	public static String IPFS_Cascade_Result_Import_Change;
+	public static String IPFS_Cascade_Result_File_Updated;
+	public static String IPFS_Cascade_Partial_Failure;
+	public static String IPFS_Download_Existing_Title;
+	public static String IPFS_Download_Existing_Message;
+	public static String IPFS_Download_Replace_Button;
+	public static String IPFS_Download_Open_Existing_Button;
+	// EcoreFS end: message keys for publishing with cascade and for downloads into namespace folders
 	static {
 		// initialize resource bundle
 		NLS.initializeMessages(BUNDLE_NAME, Messages.class);

@@ -50,7 +50,10 @@ public final class IPFSModelTransfer {
 	public static PublicationResult publish(File modelFile, String apiUrl, String publishMode, String ipnsKeyName)
 			throws IOException {
 		String normalizedApiBase = normalizeApiBase(apiUrl);
-		String cid = add(modelFile, normalizedApiBase);
+		// EcoreFS begin: the file and the in-memory publication share one add request
+		// String cid = add(modelFile, normalizedApiBase);
+		String cid = add(modelFile.getName(), Files.readAllBytes(modelFile.toPath()), normalizedApiBase);
+		// EcoreFS end: the file and the in-memory publication share one add request
 		String ipfsUri = "ipfs://" + cid; //$NON-NLS-1$
 		String ipfsPath = "/ipfs/" + cid; //$NON-NLS-1$
 		String gatewayUrl = createGatewayUrl(ipfsPath, normalizedApiBase);
@@ -73,6 +76,28 @@ public final class IPFSModelTransfer {
 		return new PublicationResult(cid, ipfsUri, ipfsPath, gatewayUrl, publishedName.name, ipnsUri, ipnsPath,
 				ipnsGatewayUrl);
 	}
+
+	// EcoreFS begin: publication of model bytes that have no file, for the cascade
+	/**
+	 * Adds and pins model bytes that have no file of their own, such as the new
+	 * version that the cascade creates for a model the workspace holds no
+	 * working copy of. The publication is always by CID, because import
+	 * locations name versions by CID.
+	 *
+	 * @param fileName the file name to send along with the bytes
+	 * @param contents the bytes to add
+	 * @param apiUrl   the Kubo API address, or null for the configured default
+	 * @return the CID of the bytes and the addresses that name it
+	 * @throws IOException when the node does not accept the content
+	 */
+	public static PublicationResult publish(String fileName, byte[] contents, String apiUrl) throws IOException {
+		String normalizedApiBase = normalizeApiBase(apiUrl);
+		String cid = add(fileName, contents, normalizedApiBase);
+		String ipfsPath = "/ipfs/" + cid; //$NON-NLS-1$
+		return new PublicationResult(cid, "ipfs://" + cid, ipfsPath, createGatewayUrl(ipfsPath, normalizedApiBase), //$NON-NLS-1$
+				null, null, null, null);
+	}
+	// EcoreFS end: publication of model bytes that have no file, for the cascade
 
 	public static File downloadToTempModel(String reference) throws IOException {
 		return downloadToTempModel(reference, null);
@@ -152,7 +177,15 @@ public final class IPFSModelTransfer {
 		}
 	}
 
-	private static String add(File modelFile, String apiUrl) throws IOException {
+	// EcoreFS begin: the add request takes bytes, so files and in-memory versions share it
+	// private static String add(File modelFile, String apiUrl) throws IOException {
+	/**
+	 * Adds and pins bytes as CIDv1 and returns the CID that the node reports.
+	 * Quotes and line breaks in the file name are replaced, because the name
+	 * goes into a header of the request.
+	 */
+	private static String add(String fileName, byte[] contents, String apiUrl) throws IOException {
+	// EcoreFS end: the add request takes bytes, so files and in-memory versions share it
 		HttpURLConnection connection = openApiConnection(apiUrl, "add?pin=true&cid-version=1"); //$NON-NLS-1$
 		String boundary = "---------------------------BPMN2Modeler" + System.currentTimeMillis(); //$NON-NLS-1$
 		connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary); //$NON-NLS-1$ //$NON-NLS-2$
@@ -161,10 +194,15 @@ public final class IPFSModelTransfer {
 
 		try (OutputStream output = connection.getOutputStream()) {
 			writeAscii(output, "--" + boundary + "\r\n"); //$NON-NLS-1$ //$NON-NLS-2$
-			writeAscii(output,
-					"Content-Disposition: form-data; name=\"file\"; filename=\"" + modelFile.getName() + "\"\r\n"); //$NON-NLS-1$ //$NON-NLS-2$
+			// EcoreFS begin: the add request takes bytes, so files and in-memory versions share it
+			// writeAscii(output,
+			// 		"Content-Disposition: form-data; name=\"file\"; filename=\"" + modelFile.getName() + "\"\r\n");
+			writeAscii(output, "Content-Disposition: form-data; name=\"file\"; filename=\"" //$NON-NLS-1$
+					+ fileName.replaceAll("[\"\\r\\n]", "_") + "\"\r\n"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 			writeAscii(output, "Content-Type: application/octet-stream\r\n\r\n"); //$NON-NLS-1$
-			Files.copy(modelFile.toPath(), output);
+			// Files.copy(modelFile.toPath(), output);
+			output.write(contents);
+			// EcoreFS end: the add request takes bytes, so files and in-memory versions share it
 			writeAscii(output, "\r\n--" + boundary + "--\r\n"); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 

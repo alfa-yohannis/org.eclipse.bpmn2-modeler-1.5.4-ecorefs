@@ -16,6 +16,9 @@ IPFS is exposed through two explicit UI actions instead:
 - `BPMN2 IPFS > Publish Current BPMN2 Model to IPFS...`
 - `BPMN2 IPFS > Open BPMN2 Project from IPFS...`
 - `BPMN2 IPFS > Publish BPMN2 Project to IPFS...`
+<!-- EcoreFS begin: publication with cascade -->
+- `BPMN2 IPFS > Publish Current BPMN2 Model to IPFS with Cascade...`
+<!-- EcoreFS end: publication with cascade -->
 
 ## What The Actions Do
 
@@ -23,7 +26,14 @@ IPFS is exposed through two explicit UI actions instead:
 
 - accepts a `CID`, `/ipfs/...` path, `ipfs://...` URI, or `IPNS` reference
 - fetches the BPMN XML through Kubo
+<!-- EcoreFS begin: downloads go to the folder of their namespace -->
+<!--
 - writes it into the selected workspace folder, the active model folder, or the active project when one is available
+-->
+- writes it into the folder of its target namespace in the project of the selected folder or of the active model, so every download of a model lands in the same file: `http://ecorefs.org/case-study/order-process` gives `ecorefs.org/case-study/order-process/order-process.bpmn`
+- opens that file as it is when it already holds the same bytes; otherwise asks whether to replace it, which keeps the old contents in the local history, or to open the file as it is
+- writes a model without a usable target namespace into the selected workspace folder, the active model folder, or the active project, named as described below
+<!-- EcoreFS end: downloads go to the folder of their namespace -->
 - falls back to a temporary local `.bpmn` file only when there is no usable active workspace location
 <!-- EcoreFS begin: readable names for downloaded models -->
 - names the file after the model, because a CID does not record the name it was published under: the definitions name, the collaboration name, the first process name, or the first process id, in that order; editor placeholders such as `Default Process` or `Process_1` are used only when nothing better exists, and the CID only when the model has no names
@@ -40,6 +50,22 @@ IPFS is exposed through two explicit UI actions instead:
 - when the project publish mode is `IPNS`, publishes the new `CID` and then updates the configured IPNS key name to point to it
 - the publish success popup is resizable and keeps the full references in a multi-line text area so they can be selected or copied
 <!-- EcoreFS end: per-project IPFS/IPNS publishing behavior documentation -->
+
+<!-- EcoreFS begin: publication with cascade -->
+`Publish Current BPMN2 Model to IPFS with Cascade...`
+
+- publishes the current model and gives every model that imports it by CID a new version that names the new CID, as `saveIPFSCascaded` does in the EcoreFS core plug-in
+- saves the open models of the project first
+- looks for the importers among the `.bpmn` and `.bpmn2` files of the project and among the versions that those files pin with `ipfs://` import locations; an import refers to the published model when it names the target namespace of that model
+- lists the affected models and asks before it publishes anything
+- publishes each model after the models it imports: a working copy gets the new CIDs written into the `location` of its imports and keeps every other byte, and a version that exists only on IPFS is republished from its pinned bytes
+- closes and reopens the editors of the rewritten files, because the editor does not reload a file that changes on disk
+- publishes by CID even when the project publish mode is `IPNS`, because import locations name versions by CID
+- stops before it changes anything when two files of the project declare the namespace of the published model, when an affected import pins a version that differs from the working copy of that model, or when models import each other by CID
+- shows each published model with its new CID and the import locations that changed
+
+`Save` still writes only the local file, and `Publish Current BPMN2 Model to IPFS...` still publishes one model. The models that import it keep the old CID until the cascade runs.
+<!-- EcoreFS end: publication with cascade -->
 
 `Publish BPMN2 Project to IPFS...`
 
@@ -102,6 +128,9 @@ The open action accepts:
 - The temp-file fallback is still used when there is no active workspace location to persist into.
 - Project imports always restore into a real workspace folder; they do not use temp files.
 - IPNS publishing expects a Kubo key name that already exists in the local node.
+<!-- EcoreFS begin: publication with cascade -->
+- The cascade finds importers only in the project of the published model and in the versions those files pin. IPFS cannot list the other models that import a CID.
+<!-- EcoreFS end: publication with cascade -->
 
 ## Build
 
@@ -139,3 +168,6 @@ These self-tests cover:
 - workspace-persist behavior for the IPFS open action
 - project-manifest command wiring and documentation
 - a real BPMN file round-trip through Kubo when `--integration` is enabled
+<!-- EcoreFS begin: self-tests of the cascade -->
+- the namespace folders, the reading and rewriting of BPMN imports, and the planning and publication of a cascade with an in-memory store, plus the same cascade on Kubo when `--integration` is enabled
+<!-- EcoreFS end: self-tests of the cascade -->

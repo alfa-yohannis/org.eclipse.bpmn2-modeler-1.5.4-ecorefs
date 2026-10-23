@@ -112,9 +112,25 @@ final class IPFSWorkspaceResourceSupport {
 	 */
 	static IFile downloadToWorkspaceFile(String reference, String apiUrl, IContainer container) throws Exception {
 		byte[] contents = IPFSModelTransfer.downloadBytes(reference, apiUrl);
+		// EcoreFS begin: the naming of a new model file is shared with the download into a namespace folder
+		// IFile targetFile = createUniqueTargetFile(container, IPFSModelFileName.derive(reference, contents), "bpmn"); //$NON-NLS-1$
+		// return writeWorkspaceFile(container, targetFile.getName(), contents);
+		return writeNewModelFile(container, reference, contents);
+		// EcoreFS end: the naming of a new model file is shared with the download into a namespace folder
+	}
+
+	// EcoreFS begin: the naming of a new model file is shared with the download into a namespace folder
+	/**
+	 * Writes downloaded bytes to a new file in a container. The file is named
+	 * after the model and gets a numbered suffix when that name is taken. The
+	 * download into a namespace folder falls back to this for a model without
+	 * a usable namespace.
+	 */
+	static IFile writeNewModelFile(IContainer container, String reference, byte[] contents) throws Exception {
 		IFile targetFile = createUniqueTargetFile(container, IPFSModelFileName.derive(reference, contents), "bpmn"); //$NON-NLS-1$
 		return writeWorkspaceFile(container, targetFile.getName(), contents);
 	}
+	// EcoreFS end: the naming of a new model file is shared with the download into a namespace folder
 
 	static IFile writeWorkspaceFile(IContainer container, String relativePath, byte[] contents) throws Exception {
 		IPath path = new Path(relativePath);
@@ -131,7 +147,10 @@ final class IPFSWorkspaceResourceSupport {
 		IFile file = container.getFile(path);
 		try (InputStream input = new ByteArrayInputStream(contents)) {
 			if (file.exists()) {
-				file.setContents(input, IResource.FORCE, new NullProgressMonitor());
+				// EcoreFS begin: a replaced file keeps its previous contents in the local history
+				// file.setContents(input, IResource.FORCE, new NullProgressMonitor());
+				file.setContents(input, IResource.FORCE | IResource.KEEP_HISTORY, new NullProgressMonitor());
+				// EcoreFS end: a replaced file keeps its previous contents in the local history
 			} else {
 				file.create(input, IResource.FORCE, new NullProgressMonitor());
 			}

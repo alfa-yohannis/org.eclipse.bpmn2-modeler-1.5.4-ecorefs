@@ -116,6 +116,11 @@ public final class IPFSModelTransferSelfTest {
 		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSPublishModelCommand", "plugin.xml should register the publish handler"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSOpenProjectCommand", "plugin.xml should register the project open handler"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSPublishProjectCommand", "plugin.xml should register the project publish handler"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS begin: the cascade command is registered like the other IPFS commands
+		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.command.publishModelToIpfsWithCascade", "plugin.xml should declare the cascade command"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSPublishCascadeCommand", "plugin.xml should register the cascade handler"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(pluginXml, "%command.label.6", "plugin.xml should put the cascade command in the BPMN2 IPFS menu"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS end: the cascade command is registered like the other IPFS commands
 	}
 
 	private static void testManifestIncludesFilesystemDependencyAndQualifierVersion(Path repoRoot) throws Exception {
@@ -135,6 +140,10 @@ public final class IPFSModelTransferSelfTest {
 		assertContains(doc, "1.5.4.qualifier", "documentation should mention the qualifier bundle version"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "selected workspace folder", "documentation should mention workspace persistence"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "JSON manifest", "documentation should mention the project manifest"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS begin: the documentation covers the cascade and the namespace folders
+		assertContains(doc, "Publish Current BPMN2 Model to IPFS with Cascade", "documentation should mention the cascade action"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "folder of its target namespace", "documentation should mention the namespace folders"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS end: the documentation covers the cascade and the namespace folders
 	}
 
 	private static void testProjectPropertiesExposeIpfsSettings(Path repoRoot) throws Exception {
@@ -155,7 +164,14 @@ public final class IPFSModelTransferSelfTest {
 		String command = read(repoRoot.resolve(
 				"plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/commands/IPFSOpenModelCommand.java")); //$NON-NLS-1$
 		assertContains(command, "resolveTargetContainer", "open command should resolve an active workspace container"); //$NON-NLS-1$ //$NON-NLS-2$
-		assertContains(command, "downloadToWorkspaceFile", "open command should persist downloaded files into the workspace"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS begin: downloads go to the folder of their namespace in the project
+		// assertContains(command, "downloadToWorkspaceFile", "open command should persist downloaded files into the workspace");
+		assertContains(command, "new IPFSNamespaceDownload(", "open command should store downloads in their namespace folder"); //$NON-NLS-1$ //$NON-NLS-2$
+		String download = read(repoRoot.resolve(
+				"plugins/org.eclipse.bpmn2.modeler.ui/src/org/eclipse/bpmn2/modeler/ui/commands/IPFSNamespaceDownload.java")); //$NON-NLS-1$
+		assertContains(download, "BpmnNamespaceFolder.modelPathFor", "the download should place the model by its namespace"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(download, "writeNewModelFile", "a model without a namespace should keep the old placement"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS end: downloads go to the folder of their namespace in the project
 		assertContains(command, "IDE.openEditor(page, targetFile)", "open command should open persisted workspace files"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 

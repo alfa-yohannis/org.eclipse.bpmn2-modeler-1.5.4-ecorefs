@@ -59,9 +59,16 @@ public class IPFSOpenModelCommand extends AbstractHandler {
 			// EcoreFS begin: persist downloaded models into the active workspace folder when one is available
 			org.eclipse.core.resources.IContainer targetContainer = IPFSWorkspaceResourceSupport.resolveTargetContainer(event);
 			if (targetContainer != null) {
-				org.eclipse.core.resources.IFile targetFile = IPFSWorkspaceResourceSupport.downloadToWorkspaceFile(
-						dialog.getValue(), apiUrl, targetContainer);
-				IDE.openEditor(page, targetFile);
+				// EcoreFS begin: a downloaded model goes to the folder of its namespace in the project
+				// org.eclipse.core.resources.IFile targetFile = IPFSWorkspaceResourceSupport.downloadToWorkspaceFile(
+				// 		dialog.getValue(), apiUrl, targetContainer);
+				// IDE.openEditor(page, targetFile);
+				org.eclipse.core.resources.IFile targetFile = new IPFSNamespaceDownload(HandlerUtil.getActiveShell(event),
+						apiUrl).download(dialog.getValue(), targetContainer);
+				if (targetFile != null) {
+					IDE.openEditor(page, targetFile);
+				}
+				// EcoreFS end: a downloaded model goes to the folder of its namespace in the project
 				return null;
 			}
 
