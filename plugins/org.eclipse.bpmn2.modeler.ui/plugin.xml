@@ -1282,6 +1282,13 @@
            name="%command.name.6">
      </command>
      <!-- EcoreFS end: command that publishes a model and the models that import it by CID -->
+     <!-- EcoreFS begin: command that downloads a model that the current model imports, for editing -->
+     <command
+           id="org.eclipse.bpmn2.modeler.command.openImportedModelFromIpfs"
+           categoryId="org.eclipse.bpmn2.modeler.command.category"
+           name="%command.name.7">
+     </command>
+     <!-- EcoreFS end: command that downloads a model that the current model imports, for editing -->
   </extension>
 
 	<!-- menu handlers -->
@@ -1323,6 +1330,12 @@
 	        commandId="org.eclipse.bpmn2.modeler.command.publishModelToIpfsWithCascade">
 	     </handler>
 	     <!-- EcoreFS end: handler that publishes a model and the models that import it by CID -->
+	     <!-- EcoreFS begin: handler that downloads a model that the current model imports, for editing -->
+	     <handler
+	        class="org.eclipse.bpmn2.modeler.ui.commands.IPFSOpenImportedModelCommand"
+	        commandId="org.eclipse.bpmn2.modeler.command.openImportedModelFromIpfs">
+	     </handler>
+	     <!-- EcoreFS end: handler that downloads a model that the current model imports, for editing -->
 	</extension> 
 	
 	<!-- menu -->
@@ -1377,6 +1390,21 @@
 	       id= "openFromIpfs"
 	       label= "%command.label.2">
 	    </command>
+	    <!-- EcoreFS begin: menu entry that downloads a model that the current model imports, for editing -->
+	    <command
+	       commandId="org.eclipse.bpmn2.modeler.command.openImportedModelFromIpfs"
+	       id= "openImportedModelFromIpfs"
+	       label= "%command.label.7">
+	       <visibleWhen>
+	          <with
+	                variable="activeEditorId">
+	             <equals
+	                   value="org.eclipse.bpmn2.modeler.ui.bpmn2editor">
+	             </equals>
+	          </with>
+	       </visibleWhen>
+	    </command>
+	    <!-- EcoreFS end: menu entry that downloads a model that the current model imports, for editing -->
 	    <command
 	       commandId="org.eclipse.bpmn2.modeler.command.publishModelToIpfs"
 	       id= "publishModelToIpfs"
@@ -1405,6 +1433,12 @@
 	       </visibleWhen>
 	    </command>
 	    <!-- EcoreFS end: menu entry that publishes a model and the models that import it by CID -->
+	    <!-- EcoreFS begin: a separator keeps the model commands apart from the project commands -->
+	    <separator
+	       name="ipfsProjectCommands"
+	       visible="true">
+	    </separator>
+	    <!-- EcoreFS end: a separator keeps the model commands apart from the project commands -->
 	    <command
 	       commandId="org.eclipse.bpmn2.modeler.command.openProjectFromIpfs"
 	       id= "openProjectFromIpfs"

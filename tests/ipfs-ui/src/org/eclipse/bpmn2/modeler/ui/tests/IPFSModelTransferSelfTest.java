@@ -121,6 +121,14 @@ public final class IPFSModelTransferSelfTest {
 		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSPublishCascadeCommand", "plugin.xml should register the cascade handler"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(pluginXml, "%command.label.6", "plugin.xml should put the cascade command in the BPMN2 IPFS menu"); //$NON-NLS-1$ //$NON-NLS-2$
 		// EcoreFS end: the cascade command is registered like the other IPFS commands
+		// EcoreFS begin: the command for imported models and the separator of the project commands
+		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.command.openImportedModelFromIpfs", "plugin.xml should declare the command for imported models"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(pluginXml, "org.eclipse.bpmn2.modeler.ui.commands.IPFSOpenImportedModelCommand", "plugin.xml should register the handler for imported models"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(pluginXml, "name=\"ipfsProjectCommands\"", "plugin.xml should separate the project commands"); //$NON-NLS-1$ //$NON-NLS-2$
+		String labels = read(repoRoot.resolve("plugins/org.eclipse.bpmn2.modeler.ui/plugin.properties")); //$NON-NLS-1$
+		assertContains(labels, "command.label.7 = Open Imported Model...", "plugin.properties should label the command for imported models"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(labels, "command.label.6 = Publish Model with Cascade...", "plugin.properties should label the cascade command"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS end: the command for imported models and the separator of the project commands
 	}
 
 	private static void testManifestIncludesFilesystemDependencyAndQualifierVersion(Path repoRoot) throws Exception {
@@ -132,16 +140,23 @@ public final class IPFSModelTransferSelfTest {
 
 	private static void testDocumentationMentionsIpfsActions(Path repoRoot) throws Exception {
 		String doc = read(repoRoot.resolve("README.md")); //$NON-NLS-1$
-		assertContains(doc, "Open BPMN2 Model from IPFS", "documentation should mention the open action"); //$NON-NLS-1$ //$NON-NLS-2$
-		assertContains(doc, "Publish Current BPMN2 Model to IPFS", "documentation should mention the publish action"); //$NON-NLS-1$ //$NON-NLS-2$
-		assertContains(doc, "Open BPMN2 Project from IPFS", "documentation should mention the project open action"); //$NON-NLS-1$ //$NON-NLS-2$
-		assertContains(doc, "Publish BPMN2 Project to IPFS", "documentation should mention the project publish action"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS begin: the menu labels are short, because the menu is called BPMN2 IPFS
+		// assertContains(doc, "Open BPMN2 Model from IPFS", "documentation should mention the open action");
+		// assertContains(doc, "Publish Current BPMN2 Model to IPFS", "documentation should mention the publish action");
+		// assertContains(doc, "Open BPMN2 Project from IPFS", "documentation should mention the project open action");
+		// assertContains(doc, "Publish BPMN2 Project to IPFS", "documentation should mention the project publish action");
+		assertContains(doc, "BPMN2 IPFS > Open Model...", "documentation should mention the open action"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "BPMN2 IPFS > Open Imported Model...", "documentation should mention the action for imported models"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "BPMN2 IPFS > Publish Model...", "documentation should mention the publish action"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "BPMN2 IPFS > Open Project...", "documentation should mention the project open action"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "BPMN2 IPFS > Publish Project...", "documentation should mention the project publish action"); //$NON-NLS-1$ //$NON-NLS-2$
+		// EcoreFS end: the menu labels are short, because the menu is called BPMN2 IPFS
 		assertContains(doc, "Project Properties > BPMN2", "documentation should mention the per-project settings location"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "1.5.4.qualifier", "documentation should mention the qualifier bundle version"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "selected workspace folder", "documentation should mention workspace persistence"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "JSON manifest", "documentation should mention the project manifest"); //$NON-NLS-1$ //$NON-NLS-2$
 		// EcoreFS begin: the documentation covers the cascade and the namespace folders
-		assertContains(doc, "Publish Current BPMN2 Model to IPFS with Cascade", "documentation should mention the cascade action"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertContains(doc, "BPMN2 IPFS > Publish Model with Cascade...", "documentation should mention the cascade action"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertContains(doc, "folder of its target namespace", "documentation should mention the namespace folders"); //$NON-NLS-1$ //$NON-NLS-2$
 		// EcoreFS end: the documentation covers the cascade and the namespace folders
 	}

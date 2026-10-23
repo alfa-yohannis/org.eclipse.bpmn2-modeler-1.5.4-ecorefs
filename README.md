@@ -10,19 +10,22 @@ The UI bundle version remains:
 
 `1.5.4.qualifier`
 
-IPFS is exposed through two explicit UI actions instead:
+<!-- EcoreFS begin: short menu labels, a command for imported models and a separator -->
+IPFS is exposed through explicit UI actions in the `BPMN2 IPFS` menu instead:
 
-- `BPMN2 IPFS > Open BPMN2 Model from IPFS...`
-- `BPMN2 IPFS > Publish Current BPMN2 Model to IPFS...`
-- `BPMN2 IPFS > Open BPMN2 Project from IPFS...`
-- `BPMN2 IPFS > Publish BPMN2 Project to IPFS...`
-<!-- EcoreFS begin: publication with cascade -->
-- `BPMN2 IPFS > Publish Current BPMN2 Model to IPFS with Cascade...`
-<!-- EcoreFS end: publication with cascade -->
+- `BPMN2 IPFS > Open Model...`
+- `BPMN2 IPFS > Open Imported Model...`
+- `BPMN2 IPFS > Publish Model...`
+- `BPMN2 IPFS > Publish Model with Cascade...`
+- `BPMN2 IPFS > Open Project...`
+- `BPMN2 IPFS > Publish Project...`
+
+A separator keeps the two project actions apart from the model actions. `Open Imported Model...` and the two `Publish Model` actions need an open model, so the menu shows them only while a BPMN editor is active. The commands keep longer names, such as `Publish Model to IPFS with Cascade`, for key bindings and Quick Access.
+<!-- EcoreFS end: short menu labels, a command for imported models and a separator -->
 
 ## What The Actions Do
 
-`Open BPMN2 Model from IPFS...`
+`Open Model...`
 
 - accepts a `CID`, `/ipfs/...` path, `ipfs://...` URI, or `IPNS` reference
 - fetches the BPMN XML through Kubo
@@ -41,7 +44,15 @@ IPFS is exposed through two explicit UI actions instead:
 <!-- EcoreFS end: readable names for downloaded models -->
 - opens the persisted file in the existing BPMN2 editor flow
 
-`Publish Current BPMN2 Model to IPFS...`
+<!-- EcoreFS begin: a command for imported models -->
+`Open Imported Model...`
+
+- lists the imports of the model in the active editor whose location is an `ipfs://` URI or an `ipns://` name, including imports that are not saved yet
+- downloads the chosen model into the folder of its target namespace in the project of the active model, like `Open Model...`, and opens it for editing
+- makes a working copy of a model that the current model loads from IPFS, the first step before changing it and publishing it with cascade
+<!-- EcoreFS end: a command for imported models -->
+
+`Publish Model...`
 
 - saves the current BPMN model locally first if the editor is dirty
 - uploads the current `.bpmn` model file to Kubo
@@ -52,7 +63,7 @@ IPFS is exposed through two explicit UI actions instead:
 <!-- EcoreFS end: per-project IPFS/IPNS publishing behavior documentation -->
 
 <!-- EcoreFS begin: publication with cascade -->
-`Publish Current BPMN2 Model to IPFS with Cascade...`
+`Publish Model with Cascade...`
 
 - publishes the current model and gives every model that imports it by CID a new version that names the new CID, as `saveIPFSCascaded` does in the EcoreFS core plug-in
 - saves the open models of the project first
@@ -64,18 +75,25 @@ IPFS is exposed through two explicit UI actions instead:
 - stops before it changes anything when two files of the project declare the namespace of the published model, when an affected import pins a version that differs from the working copy of that model, or when models import each other by CID
 - shows each published model with its new CID and the import locations that changed
 
-`Save` still writes only the local file, and `Publish Current BPMN2 Model to IPFS...` still publishes one model. The models that import it keep the old CID until the cascade runs.
+`Save` still writes only the local file, and `Publish Model...` still publishes one model. The models that import it keep the old CID until the cascade runs.
 <!-- EcoreFS end: publication with cascade -->
 
-`Publish BPMN2 Project to IPFS...`
+`Publish Project...`
 
 - saves dirty editors before collecting files
 - scans the active project or selected folder recursively for `.bpmn` and `.bpmn2` files
+<!-- EcoreFS begin: the files of a folder are published as one consistent set -->
+<!--
 - publishes each BPMN file by CID
+-->
+- publishes the BPMN files by CID as one consistent set: an `ipfs://` import of another model of the folder gets the CID that this publication gives that model, the files are published in dependency order, and a working copy gets the new locations written into its imports
+- gives new versions to versions on IPFS that the folder pins and that import a model of the folder, after asking
+- offers to publish the files as they are when the folder cannot be published consistently, for example because of a cycle of imports
+<!-- EcoreFS end: the files of a folder are published as one consistent set -->
 - generates a small JSON manifest that records the root model and each relative path to CID mapping
 - publishes that manifest as the project entry point, optionally through IPNS
 
-`Open BPMN2 Project from IPFS...`
+`Open Project...`
 
 - accepts a BPMN project manifest reference
 - downloads the manifest JSON

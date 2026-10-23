@@ -1,7 +1,6 @@
 package org.eclipse.bpmn2.modeler.ui.commands;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.bpmn2.modeler.core.preferences.Bpmn2Preferences;
@@ -28,7 +27,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
  * does in the core plug-in.
  *
  * <p>
- * Save writes the working copy only, and Publish to IPFS publishes one model.
+ * Save writes the working copy only, and Publish Model publishes one model.
  * The models that import it keep the CID of the old version until this
  * command runs. It looks for them among the BPMN files of the project of the
  * model and among the versions those files pin on IPFS, asks the user to
@@ -93,7 +92,7 @@ public class IPFSPublishCascadeCommand extends AbstractHandler {
 
 	/**
 	 * Asks the user to confirm the models that get new versions. A model that
-	 * no other model imports is published without asking, like Publish to IPFS.
+	 * no other model imports is published without asking, like Publish Model.
 	 */
 	private boolean confirm(Shell shell, IPFSImportCascade cascade) {
 		if (cascade.getImporters().isEmpty()) {
@@ -105,24 +104,13 @@ public class IPFSPublishCascadeCommand extends AbstractHandler {
 	}
 
 	/**
-	 * Closes the editors of the working copies that the cascade rewrites,
-	 * publishes, opens the editors again and reports the outcome. After a
-	 * failure, the report lists what was published before it.
+	 * Publishes the cascade around the open editors and reports the outcome.
+	 * After a failure, the report lists what was published before it.
 	 */
 	private void publishCascade(Shell shell, IPFSImportCascade cascade, IProject project) {
-		List<IPFSModelEditors.ClosedEditor> closedEditors = IPFSModelEditors
-				.closeEditorsOf(filesOf(cascade.getWorkingCopiesToRewrite()));
-		IOException failure = null;
-		try {
-			cascade.publish();
-		} catch (IOException e) {
-			failure = e;
-		} finally {
-			IPFSModelEditors.reopen(closedEditors);
-		}
-		String report = IPFSCascadeReport.describe(cascade.getPublishedModels());
+		IOException failure = IPFSCascadeRun.publish(cascade);
+		String report = IPFSCascadeReport.describe(cascade.getPublishedSoFar());
 		if (failure != null) {
-			Activator.logError(failure);
 			MessageDialog.openError(shell, Messages.IPFS_Cascade_Error_Title,
 					NLS.bind(Messages.IPFS_Cascade_Partial_Failure, failure.getMessage(), report));
 			return;
@@ -132,15 +120,6 @@ public class IPFSPublishCascadeCommand extends AbstractHandler {
 		}
 		new IPFSPublicationResultDialog(shell, Messages.IPFS_Cascade_Success_Title, Messages.IPFS_Cascade_Result_Message,
 				report).open();
-	}
-
-	/** Returns the workspace files of working copies. */
-	private static List<IFile> filesOf(List<IPFSWorkingCopy> workingCopies) {
-		List<IFile> files = new ArrayList<IFile>();
-		for (IPFSWorkingCopy workingCopy : workingCopies) {
-			files.add(((WorkspaceWorkingCopy) workingCopy).getFile());
-		}
-		return files;
 	}
 }
 // EcoreFS end: command that publishes the current model and the models that import it by CID

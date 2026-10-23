@@ -66,6 +66,15 @@ public class Messages extends NLS {
 	public static String IPFS_Download_Existing_Message;
 	public static String IPFS_Download_Replace_Button;
 	public static String IPFS_Download_Open_Existing_Button;
+	public static String IPFS_Open_Imported_Title;
+	public static String IPFS_Open_Imported_Message;
+	public static String IPFS_Open_Imported_None;
+	public static String IPFS_Open_Imported_No_Workspace_File;
+	public static String IPFS_Open_Imported_Error_Title;
+	public static String IPFS_Project_Publish_Outside_Title;
+	public static String IPFS_Project_Publish_Outside_Message;
+	public static String IPFS_Project_Publish_As_Is_Message;
+	public static String IPFS_Project_Publish_As_Is_Button;
 	// EcoreFS end: message keys for publishing with cascade and for downloads into namespace folders
 	static {
 		// initialize resource bundle

@@ -59,17 +59,31 @@ final class IPFSCascadeReport {
 	private static void appendModel(StringBuilder report, IPFSCascadeModel model) {
 		report.append(nameOf(model));
 		report.append(INDENT).append(NLS.bind(Messages.IPFS_Cascade_Result_Cid, model.getNewCid()));
+		report.append(describeChanges(model));
+	}
+
+	/**
+	 * Returns the lines under one published model: the import locations that
+	 * changed and whether its working copy was updated. Each line starts with a
+	 * line break and an indent, so the text can follow the line of the model.
+	 *
+	 * @param model a published model
+	 * @return the lines, or an empty text when nothing changed
+	 */
+	static String describeChanges(IPFSCascadeModel model) {
+		StringBuilder lines = new StringBuilder();
 		for (IPFSCascadeModel.ImportChange change : model.getImportChanges()) {
-			report.append(INDENT).append(NLS.bind(Messages.IPFS_Cascade_Result_Import_Change,
+			lines.append(INDENT).append(NLS.bind(Messages.IPFS_Cascade_Result_Import_Change,
 					new Object[] { change.getNamespace(), change.getOldLocation(), change.getNewLocation() }));
 		}
 		if (model.isWorkingCopyRewritten()) {
-			report.append(INDENT).append(Messages.IPFS_Cascade_Result_File_Updated);
+			lines.append(INDENT).append(Messages.IPFS_Cascade_Result_File_Updated);
 		}
+		return lines.toString();
 	}
 
 	/** Names a model, and says so when it has no working copy in the project. */
-	private static String nameOf(IPFSCascadeModel model) {
+	static String nameOf(IPFSCascadeModel model) {
 		if (model.isWorkingCopy()) {
 			return model.getDisplayName();
 		}

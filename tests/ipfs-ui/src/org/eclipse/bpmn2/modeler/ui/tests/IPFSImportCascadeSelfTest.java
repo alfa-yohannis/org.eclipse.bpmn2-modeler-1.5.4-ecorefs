@@ -59,7 +59,11 @@ public final class IPFSImportCascadeSelfTest {
 		testDifferentWorkingCopyStopsTheCascade();
 		testCycleStopsTheCascade();
 		testSharedNamespaceStopsTheCascade();
+		testSharedNamespaceWithoutImportersIsPublished();
 		testModelWithoutImportersIsPublishedAlone();
+		testProjectNamesTheVersionsPublishedTogether();
+		testProjectGivesPinnedVersionsNewVersions();
+		testProjectRefusesACycle();
 		System.out.println("IPFS cascade self-tests passed."); //$NON-NLS-1$
 		if (Arrays.asList(args).contains("--integration")) { //$NON-NLS-1$
 			testCascadeOnKubo();
@@ -204,13 +208,27 @@ public final class IPFSImportCascadeSelfTest {
 		assertCascadeRefused(a, workingCopies(a, workingCopyOfB), store, "import each other by CID"); //$NON-NLS-1$
 	}
 
-	/** Checks that a second working copy with the namespace of the published model stops the cascade. */
+	/**
+	 * Checks that an import of a namespace that the published model shares with
+	 * another working copy stops the cascade, because it could mean either file.
+	 */
 	private static void testSharedNamespaceStopsTheCascade() throws Exception {
 		MemoryStore store = new MemoryStore();
 		CaseStudy caseStudy = new CaseStudy(store);
 		MemoryWorkingCopy payment = new MemoryWorkingCopy("p/payment-process.bpmn", caseStudy.changedPayment()); //$NON-NLS-1$
 		MemoryWorkingCopy copy = new MemoryWorkingCopy("p/payment-process-1.bpmn", caseStudy.payment); //$NON-NLS-1$
-		assertCascadeRefused(payment, workingCopies(payment, copy), store, "declare the target namespace"); //$NON-NLS-1$
+		MemoryWorkingCopy collaboration = new MemoryWorkingCopy("p/collaboration.bpmn", caseStudy.collaboration); //$NON-NLS-1$
+		assertCascadeRefused(payment, workingCopies(payment, copy, collaboration), store, "several files declare it"); //$NON-NLS-1$
+	}
+
+	/** Checks that a shared namespace that no import names does not stop the publication. */
+	private static void testSharedNamespaceWithoutImportersIsPublished() throws Exception {
+		MemoryStore store = new MemoryStore();
+		MemoryWorkingCopy first = new MemoryWorkingCopy("p/first.bpmn", model(PAYMENT, "First")); //$NON-NLS-1$ //$NON-NLS-2$
+		MemoryWorkingCopy second = new MemoryWorkingCopy("p/second.bpmn", model(PAYMENT, "Second")); //$NON-NLS-1$ //$NON-NLS-2$
+		IPFSImportCascade cascade = IPFSImportCascade.plan(first, workingCopies(first, second), store);
+		cascade.publish();
+		assertEquals("1", String.valueOf(store.publications), "only the published model should be published"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/** Checks that a model that nothing imports is published alone. */
@@ -221,6 +239,69 @@ public final class IPFSImportCascadeSelfTest {
 		cascade.publish();
 		assertEquals("0", String.valueOf(cascade.getImporters().size()), "nothing imports the payment process"); //$NON-NLS-1$ //$NON-NLS-2$
 		assertEquals("1", String.valueOf(store.publications), "only the payment process should be published"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	/**
+	 * Checks the publication of a whole folder: the imports between its models
+	 * name the versions published together, in dependency order, and every
+	 * working copy that changes gets the new locations.
+	 */
+	private static void testProjectNamesTheVersionsPublishedTogether() throws Exception {
+		MemoryStore store = new MemoryStore();
+		CaseStudy caseStudy = new CaseStudy(store);
+		MemoryWorkingCopy payment = new MemoryWorkingCopy("p/payment-process.bpmn", caseStudy.changedPayment()); //$NON-NLS-1$
+		MemoryWorkingCopy order = new MemoryWorkingCopy("p/order-process.bpmn", caseStudy.order); //$NON-NLS-1$
+		MemoryWorkingCopy collaboration = new MemoryWorkingCopy("p/collaboration.bpmn", caseStudy.collaboration); //$NON-NLS-1$
+		IPFSImportCascade publication = IPFSImportCascade.planProject(workingCopies(collaboration, order, payment), store);
+		List<IPFSCascadeModel> sequence = publication.getModelsToPublish();
+		assertEquals("p/payment-process.bpmn p/order-process.bpmn p/collaboration.bpmn", //$NON-NLS-1$
+				sequence.get(0).getDisplayName() + " " + sequence.get(1).getDisplayName() + " " + sequence.get(2).getDisplayName(), //$NON-NLS-1$ //$NON-NLS-2$
+				"the models of the folder should be published in dependency order"); //$NON-NLS-1$
+		assertEquals("0", String.valueOf(publication.getImporters().size()), "nothing outside the folder is affected"); //$NON-NLS-1$ //$NON-NLS-2$
+		publication.publish();
+		String newPayment = "ipfs://" + sequence.get(0).getNewCid(); //$NON-NLS-1$
+		String newOrder = "ipfs://" + sequence.get(1).getNewCid(); //$NON-NLS-1$
+		assertContains(new String(order.contents, StandardCharsets.UTF_8), "location=\"" + newPayment + "\"", //$NON-NLS-1$ //$NON-NLS-2$
+				"the order working copy should import the payment process published with it"); //$NON-NLS-1$
+		String collaborationText = new String(collaboration.contents, StandardCharsets.UTF_8);
+		assertContains(collaborationText, "location=\"" + newOrder + "\"", "the collaboration should import the new order process"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertContains(collaborationText, "location=\"" + newPayment + "\"", "the collaboration should import the new payment process"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertEquals("0", String.valueOf(payment.writes), "the payment process imports nothing and stays as it is"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	/**
+	 * Checks that a folder publication gives a new version to a version on
+	 * IPFS that the folder pins and that imports a model of the folder.
+	 */
+	private static void testProjectGivesPinnedVersionsNewVersions() throws Exception {
+		MemoryStore store = new MemoryStore();
+		CaseStudy caseStudy = new CaseStudy(store);
+		MemoryWorkingCopy payment = new MemoryWorkingCopy("p/payment-process.bpmn", caseStudy.changedPayment()); //$NON-NLS-1$
+		MemoryWorkingCopy collaboration = new MemoryWorkingCopy("p/collaboration.bpmn", caseStudy.collaboration); //$NON-NLS-1$
+		IPFSImportCascade publication = IPFSImportCascade.planProject(workingCopies(collaboration, payment), store);
+		assertEquals("1", String.valueOf(publication.getImporters().size()), "the order process on IPFS is affected"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertEquals(caseStudy.orderLocation, publication.getImporters().get(0).getPinnedLocation(),
+				"the affected version should be the pinned order process"); //$NON-NLS-1$
+		publication.publish();
+		String newOrder = "ipfs://" + publication.getImporters().get(0).getNewCid(); //$NON-NLS-1$
+		assertContains(new String(collaboration.contents, StandardCharsets.UTF_8), "location=\"" + newOrder + "\"", //$NON-NLS-1$ //$NON-NLS-2$
+				"the collaboration should import the new version of the order process"); //$NON-NLS-1$
+	}
+
+	/** Checks that two models of a folder that import each other by CID stop the publication. */
+	private static void testProjectRefusesACycle() throws Exception {
+		MemoryStore store = new MemoryStore();
+		String oldA = store.add(model("urn:a", "A")); //$NON-NLS-1$ //$NON-NLS-2$
+		String oldB = store.add(model("urn:b", "B")); //$NON-NLS-1$ //$NON-NLS-2$
+		MemoryWorkingCopy a = new MemoryWorkingCopy("p/a.bpmn", model("urn:a", "A", "urn:b", oldB)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		MemoryWorkingCopy b = new MemoryWorkingCopy("p/b.bpmn", model("urn:b", "B", "urn:a", oldA)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		try {
+			IPFSImportCascade.planProject(workingCopies(a, b), store);
+		} catch (IPFSCascadeException e) {
+			assertContains(e.getMessage(), "import each other by CID", "the refusal should name the cycle"); //$NON-NLS-1$ //$NON-NLS-2$
+			return;
+		}
+		throw new AssertionError("Expected the folder publication to be refused for a cycle."); //$NON-NLS-1$
 	}
 
 	/**

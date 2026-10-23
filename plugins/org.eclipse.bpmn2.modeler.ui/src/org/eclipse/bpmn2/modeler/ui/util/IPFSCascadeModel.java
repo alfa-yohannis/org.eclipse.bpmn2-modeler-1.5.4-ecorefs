@@ -151,16 +151,16 @@ public final class IPFSCascadeModel {
 		return sameNamespaceWorkingCopies;
 	}
 
-	/** Returns the {@code ipfs://} imports of the version with the versions they pin. */
+	/** Returns the {@code ipfs://} imports of the version with the versions they refer to. */
 	List<ImportTarget> getImportTargets() {
 		return importTargets;
 	}
 
 	/**
-	 * Records the version that one {@code ipfs://} import pins.
+	 * Records the version that one {@code ipfs://} import refers to.
 	 *
 	 * @param declaration the import
-	 * @param target      the pinned version, or null when the import names the published model
+	 * @param target      a published model, a working copy or a version that exists only on IPFS
 	 */
 	void addImportTarget(BpmnImport declaration, IPFSCascadeModel target) {
 		importTargets.add(new ImportTarget(declaration, target));
@@ -192,8 +192,9 @@ public final class IPFSCascadeModel {
 	}
 
 	/**
-	 * One {@code ipfs://} import of a model version and the version it pins;
-	 * a null target stands for the published model.
+	 * One {@code ipfs://} import of a model version and the version it refers
+	 * to: a published model, when the import names its namespace, or else the
+	 * version that the location pins.
 	 */
 	static final class ImportTarget {
 
@@ -204,7 +205,7 @@ public final class IPFSCascadeModel {
 		 * Creates the pair.
 		 *
 		 * @param declaration the import
-		 * @param model       the pinned version, or null for the published model
+		 * @param model       the version the import refers to
 		 */
 		ImportTarget(BpmnImport declaration, IPFSCascadeModel model) {
 			this.declaration = declaration;
@@ -216,7 +217,7 @@ public final class IPFSCascadeModel {
 			return declaration;
 		}
 
-		/** Returns the pinned version, or null when the import names the published model. */
+		/** Returns the version the import refers to. */
 		IPFSCascadeModel getModel() {
 			return model;
 		}
