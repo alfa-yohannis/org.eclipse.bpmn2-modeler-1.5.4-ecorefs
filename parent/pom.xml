@@ -75,7 +75,10 @@
 				<platform-version>[4.8,5.2)</platform-version>
 				<platform-version-name>2022-06</platform-version-name>
 				<!-- I20220401155710  S20220517184036 -->
-				<eclipse.orbit.url>https://download.eclipse.org/tools/orbit/downloads/drops/S20220517184036/repository</eclipse.orbit.url>
+				<!-- EcoreFS begin: the S-build of Orbit returns 404, so use R20220531185310, the Orbit release of 2022-06 -->
+				<!-- <eclipse.orbit.url>https://download.eclipse.org/tools/orbit/downloads/drops/S20220517184036/repository</eclipse.orbit.url> -->
+				<eclipse.orbit.url>https://download.eclipse.org/tools/orbit/downloads/drops/R20220531185310/repository</eclipse.orbit.url>
+				<!-- EcoreFS end -->
 			</properties>
 			
 		</profile>		
@@ -136,6 +139,7 @@
 			<url>${eclipse-site}</url>
 		</repository>
 
+		<!-- EcoreFS begin: the BPMN2 1.5.1 site returns 404; the release train of the platform profile carries the same 1.5.1 bundles
 		<repository>
 			<id>eclipse-bpmn2</id>
 			<url>https://download.eclipse.org/modeling/mdt/bpmn2/updates/2020-09/1.5.1/</url>
@@ -147,6 +151,8 @@
 				<enabled>true</enabled>
 			</releases>
 		</repository>
+		-->
+		<!-- EcoreFS end -->
 
 
 		<!-- deactivated as no longer supported
@@ -166,7 +172,10 @@
 		<repository>
 			<id>eclipse-graphiti</id>
 			<!-- <url>https://download.eclipse.org/graphiti/updates/milestones/S-0.19.0M3-202205200756</url>  -->
-			<url>https://download.eclipse.org/graphiti/updates/milestones/</url>
+			<!-- EcoreFS begin: the milestones site returns 404, so use Graphiti 0.18.0, the release that Eclipse 2022-06 ships -->
+			<!-- <url>https://download.eclipse.org/graphiti/updates/milestones/</url> -->
+			<url>https://download.eclipse.org/graphiti/updates/0.18.0/</url>
+			<!-- EcoreFS end -->
 			<layout>p2</layout>
 			<snapshots>
 				<enabled>true</enabled>
@@ -201,6 +210,7 @@
 		</repository>
 
 		<!-- vvv Remove when Web Tools has a fix for https://bugs.eclipse.org/bugs/show_bug.cgi?id=501445 -->
+		<!-- EcoreFS begin: the WST I-build site returns 404; the release train of the platform profile carries Web Tools
 		<repository>
 			<id>eclipse-wst</id>
 			<url>https://download.eclipse.org/webtools/downloads/drops/R3.13.0/I-latest/repository</url>
@@ -212,6 +222,8 @@
 				<enabled>true</enabled>
 			</releases>
 		</repository>
+		-->
+		<!-- EcoreFS end -->
 		<repository>
 			<id>eclipse-orbit</id>
 			<url>${eclipse.orbit.url}</url>
